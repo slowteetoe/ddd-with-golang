@@ -35,6 +35,13 @@ func NewMongoRepo(ctx context.Context, connectionString string) (*MongoRepositor
 	}, nil
 }
 
+func (mr *MongoRepository) Ping(ctx context.Context) error {
+	if _, err := mr.purchases.EstimatedDocumentCount(ctx); err != nil {
+		return fmt.Errorf("failed to ping DB: %w", err)
+	}
+	return nil
+}
+
 func (repo *MongoRepository) Store(ctx context.Context, purchase Purchase) error {
 	mongoP := toMongoPurchase(purchase)
 	_, err := repo.purchases.InsertOne(ctx, mongoP)
@@ -62,6 +69,6 @@ func toMongoPurchase(p Purchase) mongoPurchase {
 		total:              p.total,
 		paymentMeans:       p.PaymentMeans,
 		timeOfPurchase:     p.timeOfPurchase,
-		cardToken:          p.cardToken,
+		cardToken:          p.CardToken,
 	}
 }
