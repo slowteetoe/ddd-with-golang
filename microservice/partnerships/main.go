@@ -2,12 +2,15 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 type Res struct {
@@ -18,6 +21,9 @@ type Res struct {
 }
 
 func main() {
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+
 	rand.Seed(time.Now().UnixNano())
 	min := 1
 	max := 10
@@ -46,13 +52,17 @@ func main() {
 
 	b, err := json.Marshal(sampleRes)
 	if err != nil {
-		log.Fatal(err)
+		log.Error().Err(err).Msg("")
 	}
 
-	r := mux.NewRouter()
-	r.
-		Path("/partnerships").
-		HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	r := chi.NewRouter()
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+
+	r.Get("/partnerships",
+		func(writer http.ResponseWriter, request *http.Request) {
 			ran := rand.Intn(max - min + 1)
 			if ran > 7 {
 				writer.WriteHeader(http.StatusInternalServerError)
@@ -62,8 +72,8 @@ func main() {
 			_, _ = writer.Write(b)
 		})
 
-	log.Println("running")
+	log.Info().Msg("running...")
 	if err := http.ListenAndServe(":3031", r); err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Send()
 	}
 }
